@@ -3,66 +3,43 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
-  { href: "/", label: "Home" },
-  { href: "/forecast", label: "Forecast" },
-  { href: "/predict-date", label: "Predict" },
-];
 
 export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 h-16"
-      style={{
-        background: "rgba(15, 15, 26, 0.80)",
-        backdropFilter: "blur(20px)",
-        borderBottom: "1px solid rgba(42, 42, 69, 0.6)",
-      }}
-    >
-      <Link href="/" className="flex items-center gap-3">
-        <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white"
-          style={{ background: "linear-gradient(135deg, #8B5CF6, #10B981)" }}
-        >
-          S
-        </div>
-        <span
-          className="text-base font-semibold tracking-tight"
-          style={{ fontFamily: "var(--font-display)", color: "var(--sol-text)" }}
-        >
-          Sol<span style={{ color: "#8B5CF6" }}>Cast</span>
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 50,
+      height: 44,
+      background: "#0F1117",
+      borderBottom: "1px solid #1E2130",
+      display: "flex", alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0 20px",
+    }}>
+      {/* Logo */}
+      <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+        <div style={{
+          width: 24, height: 24, borderRadius: 6,
+          background: "linear-gradient(135deg, #9945FF, #14F195)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, fontWeight: 700, color: "#fff",
+        }}>S</div>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 600,
+          color: "#E6EDF3", letterSpacing: "0.02em",
+        }}>
+          SOL<span style={{ color: "#6B7280" }}>/USD</span>
         </span>
+        <span style={{
+          fontSize: 10, padding: "1px 6px", borderRadius: 3,
+          background: "#1A2535", color: "#3B82F6",
+          fontFamily: "var(--font-mono)", marginLeft: 2,
+        }}>LIVE</span>
       </Link>
 
-      <div className="flex items-center gap-1">
-        {links.map(({ href, label }) => {
-          const active = pathname === href;
-          return (
-            <Link
-              key={href}
-              href={href}
-              className="px-4 py-2 rounded-full text-sm transition-all duration-200"
-              style={
-                active
-                  ? {
-                      background: "rgba(139, 92, 246, 0.15)",
-                      border: "1px solid rgba(139, 92, 246, 0.35)",
-                      color: "#A78BFA",
-                      fontWeight: 500,
-                    }
-                  : {
-                      border: "1px solid transparent",
-                      color: "var(--sol-muted)",
-                    }
-              }
-            >
-              {label}
-            </Link>
-          );
-        })}
-      </div>
+      {/* Spacer to balance logo */}
+      <div style={{ width: 120 }} />
     </nav>
   );
 }

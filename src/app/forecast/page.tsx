@@ -3,58 +3,36 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "@/lib/config";
 import { ForecastResponse } from "@/lib/types";
+import Link from "next/link";
 import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ReferenceLine,
+  ResponsiveContainer, LineChart, Line,
+  XAxis, YAxis, Tooltip, ReferenceLine,
 } from "recharts";
 
-interface TooltipPayload {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: TooltipPayload[];
-  label?: string;
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatUSD(v: number) {
+function fmt(v: number) {
   return "$" + v.toFixed(2);
 }
 
-const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+function fmtDate(s: string) {
+  return new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+interface TooltipPayload { name: string; value: number; color: string; }
+interface TProps { active?: boolean; payload?: TooltipPayload[]; label?: string; }
+
+const CustomTooltip = ({ active, payload, label }: TProps) => {
   if (!active || !payload?.length) return null;
   return (
-    <div
-      style={{
-        background: "#1C1C30",
-        border: "1px solid #2A2A45",
-        borderRadius: 12,
-        padding: "10px 14px",
-        fontSize: 12,
-        fontFamily: "var(--font-mono)",
-      }}
-    >
-      <p style={{ color: "#8888AA", marginBottom: 6 }}>{label}</p>
+    <div style={{
+      background: "#161B22", border: "1px solid #30363D",
+      borderRadius: 6, padding: "10px 14px",
+      fontSize: 12, fontFamily: "var(--font-mono)",
+    }}>
+      <div style={{ color: "#7D8590", marginBottom: 6, fontSize: 11 }}>{label}</div>
       {payload.map((p) => (
-        <p key={p.name} style={{ color: p.color, margin: "2px 0" }}>
-          {p.name}: {formatUSD(p.value)}
-        </p>
+        <div key={p.name} style={{ color: p.color, marginBottom: 2 }}>
+          {p.name}: {fmt(p.value)}
+        </div>
       ))}
     </div>
   );
@@ -62,8 +40,8 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 
 export default function ForecastPage() {
   const [data, setData] = useState<ForecastResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${API_URL}/forecast`)
@@ -72,193 +50,139 @@ export default function ForecastPage() {
       .catch((e) => { setError(e.message); setLoading(false); });
   }, []);
 
-  // Merge semua data jadi satu array untuk chart
-  const chartData = data
-    ? [
-        ...data.history.slice(-60).map((h) => ({
-          date: formatDate(h.date),
-          History: h.price,
-        })),
-        ...data.eval.map((e) => ({
-          date: formatDate(e.date),
-          History: e.actual,
-          Backtest: e.predicted,
-        })),
-        ...data.forecast.map((f) => ({
-          date: formatDate(f.date),
-          Forecast: f.price,
-        })),
-      ]
-    : [];
+  const chartData = data ? [
+    ...data.history.slice(-60).map((h) => ({
+      date: fmtDate(h.date), History: h.price,
+    })),
+    ...data.eval.map((e) => ({
+      date: fmtDate(e.date), History: e.actual, Backtest: e.predicted,
+    })),
+    ...data.forecast.map((f) => ({
+      date: fmtDate(f.date), Forecast: f.price,
+    })),
+  ] : [];
 
-  const lastActualPrice = data?.eval[data.eval.length - 1]?.actual;
+  const todayLabel = data ? fmtDate(data.eval[data.eval.length - 1].date) : "";
+  const lastActual = data?.eval[data.eval.length - 1]?.actual;
 
   return (
-    <div className="min-h-screen px-4 md:px-10 pt-24 pb-16 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-10">
-        <p className="text-xs tracking-widest mb-2" style={{ color: "var(--sol-muted)" }}>
-          SOL / USD
-        </p>
-        <h1
-          className="text-4xl md:text-5xl font-bold mb-3"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          30-Day <span className="text-gradient-sol">Forecast</span>
-        </h1>
-        <p className="text-sm" style={{ color: "var(--sol-muted)" }}>
-          Price history · Backtest evaluation · Future prediction
-        </p>
+    <div style={{ minHeight: "100vh", paddingTop: 48 }}>
+      {/* Top bar */}
+      <div style={{
+        borderBottom: "1px solid #21262D", padding: "12px 24px",
+        fontFamily: "var(--font-mono)", fontSize: 11, color: "#7D8590",
+        display: "flex", justifyContent: "space-between",
+      }}>
+        <span>SOL-USD · 30-DAY FORECAST · INFORMER+BILSTM</span>
+        <span>History · Backtest · Forecast</span>
       </div>
 
-      {/* Chart */}
-      <div className="card p-6 mb-6">
-        {loading ? (
-          <div className="flex items-center justify-center h-80">
-            <p style={{ color: "var(--sol-muted)" }}>Loading forecast data...</p>
-          </div>
-        ) : error ? (
-          <div className="flex items-center justify-center h-80">
-            <p style={{ color: "#F87171" }}>⚠ {error}</p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <XAxis
-                dataKey="date"
-                tick={{ fill: "#8888AA", fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                interval={14}
-              />
-              <YAxis
-                tick={{ fill: "#8888AA", fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) => "$" + v.toFixed(0)}
-                width={60}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                wrapperStyle={{ fontSize: 12, color: "#8888AA", paddingTop: 16 }}
-              />
-              {lastActualPrice && (
-                <ReferenceLine
-                  x={formatDate(data!.eval[data!.eval.length - 1].date)}
-                  stroke="#2A2A45"
-                  strokeDasharray="4 4"
-                  label={{ value: "Today", fill: "#8888AA", fontSize: 11 }}
-                />
-              )}
-              <Line
-                type="monotone"
-                dataKey="History"
-                stroke="#4B5563"
-                strokeWidth={1.5}
-                dot={false}
-                connectNulls
-              />
-              <Line
-                type="monotone"
-                dataKey="Backtest"
-                stroke="#8B5CF6"
-                strokeWidth={1.5}
-                dot={false}
-                connectNulls
-                strokeDasharray="4 4"
-              />
-              <Line
-                type="monotone"
-                dataKey="Forecast"
-                stroke="#10B981"
-                strokeWidth={2}
-                dot={false}
-                connectNulls
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
+
+        {/* Back button */}
+      <div style={{ marginBottom: 20 }}>
+        <Link href="/" style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontSize: 13, color: "#6B7280", textDecoration: "none",
+          fontFamily: "var(--font-mono)",
+        }}>
+          ← Back to Overview
+        </Link>
       </div>
 
-      {/* Legend info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        {[
-          { color: "#4B5563", label: "History", desc: "Actual close prices (last 60 days)" },
-          { color: "#8B5CF6", label: "Backtest", desc: "Model predictions vs actual prices" },
-          { color: "#10B981", label: "Forecast", desc: "Predicted prices for next 30 days" },
-        ].map(({ color, label, desc }) => (
-          <div key={label} className="card2 p-4 flex items-start gap-3">
-            <div
-              className="w-3 h-3 rounded-full mt-0.5 shrink-0"
-              style={{ background: color }}
-            />
-            <div>
-              <p className="text-sm font-medium mb-1" style={{ color: "var(--sol-text)" }}>
+        {/* Header */}
+        <div style={{ marginBottom: 28 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 4 }}>
+            30-Day Price Forecast
+          </h1>
+          <p style={{ fontSize: 13, color: "#7D8590" }}>
+            Historical prices, model backtest evaluation, and 30-day forward prediction
+          </p>
+        </div>
+
+        {/* Chart */}
+        <div className="card" style={{ padding: "24px", marginBottom: 20 }}>
+          {/* Legend */}
+          <div style={{ display: "flex", gap: 20, marginBottom: 20, fontSize: 12, fontFamily: "var(--font-mono)" }}>
+            {[
+              { color: "#30363D", label: "History" },
+              { color: "#7C6FF7", label: "Backtest" },
+              { color: "#3FB950", label: "Forecast" },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, color: "#7D8590" }}>
+                <div style={{ width: 20, height: 2, background: color, borderRadius: 1 }} />
                 {label}
-              </p>
-              <p className="text-xs" style={{ color: "var(--sol-muted)" }}>{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {loading ? (
+            <div style={{ height: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "#7D8590" }}>
+              Loading...
+            </div>
+          ) : error ? (
+            <div style={{ height: 340, display: "flex", alignItems: "center", justifyContent: "center", color: "#F85149" }}>
+              ⚠ {error}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={340}>
+              <LineChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <XAxis dataKey="date" tick={{ fill: "#484F58", fontSize: 11, fontFamily: "var(--font-mono)" }}
+                  tickLine={false} axisLine={false} interval={14} />
+                <YAxis tick={{ fill: "#484F58", fontSize: 11, fontFamily: "var(--font-mono)" }}
+                  tickLine={false} axisLine={false} tickFormatter={(v) => "$" + v.toFixed(0)} width={56} />
+                <Tooltip content={<CustomTooltip />} />
+                {todayLabel && (
+                  <ReferenceLine x={todayLabel} stroke="#30363D" strokeDasharray="3 3" />
+                )}
+                <Line type="monotone" dataKey="History" stroke="#30363D" strokeWidth={1.5} dot={false} connectNulls />
+                <Line type="monotone" dataKey="Backtest" stroke="#7C6FF7" strokeWidth={1.5} dot={false} connectNulls strokeDasharray="4 3" />
+                <Line type="monotone" dataKey="Forecast" stroke="#3FB950" strokeWidth={2} dot={false} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Forecast table */}
+        {data && (
+          <div className="card" style={{ overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #21262D" }}>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>Forecast Details</span>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: "var(--font-mono)" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #21262D" }}>
+                    {["Date", "Predicted Price", "Daily Change"].map((h) => (
+                      <th key={h} style={{
+                        textAlign: "left", padding: "10px 20px",
+                        fontSize: 11, color: "#484F58", letterSpacing: "0.06em",
+                        fontWeight: 400,
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.forecast.map((f, i) => {
+                    const prev = i === 0 ? lastActual! : data.forecast[i - 1].price;
+                    const chg = ((f.price - prev) / prev) * 100;
+                    const up = chg >= 0;
+                    return (
+                      <tr key={f.date} style={{ borderBottom: "1px solid #161B22" }}>
+                        <td style={{ padding: "10px 20px", color: "#7D8590" }}>{f.date}</td>
+                        <td style={{ padding: "10px 20px", color: "#E6EDF3", fontWeight: 500 }}>{fmt(f.price)}</td>
+                        <td style={{ padding: "10px 20px", color: up ? "#3FB950" : "#F85149" }}>
+                          {up ? "+" : ""}{chg.toFixed(2)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        ))}
+        )}
       </div>
-
-      {/* Forecast table */}
-      {data && (
-        <div className="card p-6">
-          <h2
-            className="text-lg font-semibold mb-4"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Forecast Details
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: "1px solid #2A2A45" }}>
-                  {["Date", "Predicted Price", "Change"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left py-2 px-3 text-xs tracking-widest"
-                      style={{ color: "var(--sol-muted)" }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data.forecast.map((f, i) => {
-                  const prev = i === 0 ? lastActualPrice! : data.forecast[i - 1].price;
-                  const chg = ((f.price - prev) / prev) * 100;
-                  const isUp = chg >= 0;
-                  return (
-                    <tr
-                      key={f.date}
-                      style={{ borderBottom: "1px solid rgba(42,42,69,0.4)" }}
-                    >
-                      <td className="py-2 px-3" style={{ color: "var(--sol-muted)" }}>
-                        {f.date}
-                      </td>
-                      <td
-                        className="py-2 px-3 font-medium"
-                        style={{ color: "var(--sol-text)" }}
-                      >
-                        {formatUSD(f.price)}
-                      </td>
-                      <td
-                        className="py-2 px-3 text-xs font-medium"
-                        style={{ color: isUp ? "#34D399" : "#F87171" }}
-                      >
-                        {isUp ? "▲" : "▼"} {Math.abs(chg).toFixed(2)}%
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
